@@ -93,10 +93,10 @@ const styles = StyleSheet.create({
     },
     button: {
         backgroundColor: blue,
-        width: '60%',
+        width: '100%',
         position: 'absolute',
         bottom: 0,
-        padding: width * 0.02,
+        padding: width * 0.025,
         justifyContent: 'center',
         alignItems: 'center',
         borderRadius: 5

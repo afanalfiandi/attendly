@@ -127,6 +127,7 @@ const styles = StyleSheet.create({
   },
   startTxt: {
     color: 'white',
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    fontSize: 15
   }
 })

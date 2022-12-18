@@ -1,4 +1,4 @@
-import { TextInput, ActivityIndicator, PermissionsAndroid, ScrollView, Dimensions, RefreshControl, StyleSheet, Text, Image, View, TouchableOpacity, Touchable, Alert } from 'react-native'
+import { Pressable, TextInput, FlatList, Modal, ActivityIndicator, PermissionsAndroid, ScrollView, Dimensions, RefreshControl, StyleSheet, Text, Image, View, TouchableOpacity, Touchable, Alert } from 'react-native'
 import React, { useCallback, useEffect, useState } from 'react'
 import { responsiveFontSize, responsiveHeight, responsiveWidth } from 'react-native-responsive-dimensions'
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -29,6 +29,7 @@ const wait = (timeout) => {
 }
 const Profil = () => {
   const [loading, setLoading] = useState(true);
+  const [modalVisible, setModalVisible] = useState(false);
   const [mapLoading, setMapLoading] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [pwLoading, setPwLoading] = useState(false);
@@ -44,14 +45,16 @@ const Profil = () => {
     userID: '',
     userNip: '',
     userNama: '',
-    userEmail: '',
-    userNoHp: '',
     userImg: '',
+    userJabatan: ''
   });
-
+  const [dataJabatan, setDataJabatan] = useState({
+    id: '',
+    jabatan: ''
+  })
   const [nama, setNama] = useState(user.userNama);
-  const [noHp, setNoHp] = useState(user.userNoHp);
-  const [email, setEmail] = useState(user.userEmail);
+  const [jabatan, setJabatan] = useState();
+  const [optJabatan, setOptJabatan] = useState();
 
 
   const [pwLama, setPwLama] = useState();
@@ -60,7 +63,8 @@ const Profil = () => {
   const [fotouri, setUri] = useState();
   const [fototype, setType] = useState();
   const [fotoname, setName] = useState();
-
+  const [lat, setLat] = useState();
+  const [long, setLong] = useState();
   const [initialRegion, setInitialRegion] = useState({
     latitude: 0,
     longitude: 0,
@@ -89,6 +93,9 @@ const Profil = () => {
         latitudeDelta: 0.005,
         longitudeDelta: 0.005,
       });
+
+      setLat(position.coords.latitude);
+      setLong(position.coords.longitude);
 
     }, (e) => console.log(e), { enableHighAccuracy: false, timeout: 3000 });
   }
@@ -171,10 +178,11 @@ const Profil = () => {
           userID: responseJson.id,
           userNip: responseJson.nip,
           userNama: responseJson.nama,
-          userEmail: responseJson.email,
-          userNoHp: responseJson.no_hp,
           userImg: responseJson.img,
+          userJabatan: responseJson.jabatan,
         });
+
+        setJabatan(responseJson.jabatan);
       })
       .catch((e) => {
         console.log(e);
@@ -192,8 +200,7 @@ const Profil = () => {
       body: JSON.stringify({
         id: userId,
         nama: nama,
-        no_hp: noHp,
-        email: email,
+        jabatan: optJabatan
       })
     }).then((response) => response.json())
       .then((responseJson) => {
@@ -272,6 +279,25 @@ const Profil = () => {
     }, 3000);
   }
 
+  const getJabatan = () => {
+    fetch('https://afanalfiandi.com/attendly/api/api.php?op=getJabatan', {})
+      .then((res) => res.json())
+      .then((result) => {
+        setDataJabatan(result);
+      })
+  }
+
+  const renderJabatan = ({ item }) => (
+    <View style={{ marginVertical: 5 }}>
+      <TouchableOpacity onPress={() => {
+        setModalVisible(!modalVisible);
+        setJabatan(item.jabatan);
+        setOptJabatan(item.id);
+      }} style={[{ borderBottomWidth: 1, padding: 10, borderBottomColor: grey, paddingHorizontal: 12 }]} disabled={detail ? false : true}>
+        <Text style={{ color: black }}>{item.jabatan}</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -281,21 +307,66 @@ const Profil = () => {
     wait(2000).then(() => setRefreshing(false));
   }, []);
 
+  function convertToDegree(coord) {
+    var absolute = Math.abs(coord);
+    var degrees = Math.floor(absolute);
+    var minutesNotTruncated = (absolute - degrees) * 60;
+    var minutes = Math.floor(minutesNotTruncated);
+    var seconds = Math.floor((minutesNotTruncated - minutes) * 60);
+
+    return degrees + "° " + minutes + "' " + seconds + '" ';
+  }
+  
+  function convertDMS(lat, long) {
+    var latitude = convertToDegree(lat);
+    var latitudeCardinal = lat >= 0 ? "LU" : "LS";
+
+    var longitude = convertToDegree(long);
+    var longitudeCardinal = long >= 0 ? "BT" : "BB";
+
+    return latitude + " " + latitudeCardinal + " dan " + longitude + " " + longitudeCardinal;
+  }
+
   useEffect(() => {
     setTimeout(() => {
       setLoading(false);
       getPosition();
       getUser();
+      getJabatan();
     }, 3500);
 
-    setInterval(async () => {
-      pingCheck();
-
-      const userId = await AsyncStorage.getItem('userId');
-    }, 3000);
+    
   }, []);
   return (
     <View style={styles.container}>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => {
+          Alert.alert("Modal has been closed.");
+          setModalVisible(!modalVisible);
+        }}
+      >
+        <View style={styles.centeredView}>
+          <View style={styles.modalView}>
+
+            <View style={[styles.formHeading, { marginBottom: 10 }]}>
+              <Text style={styles.h2}>Pilih Jabatan</Text>
+              <TouchableOpacity style={styles.sideBtn} onPress={() => {
+                setModalVisible(!modalVisible);
+              }}>
+                <Image source={require('../assets/img/icon/close-black.png')} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={dataJabatan}
+              renderItem={renderJabatan}
+              keyExtractor={item => item.id}
+            />
+          </View>
+        </View>
+      </Modal>
       {loading && (
         <ActivityIndicator size="large" style={styles.activityIndicator} />
       )}
@@ -380,9 +451,17 @@ const Profil = () => {
                 placeholderTextColor={grey}
               />
             </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.h3}>Titik Lokasi (DMS)</Text>
+
+              <TextInput underlineColorAndroid="transparent"
+                editable={false}
+                style={[styles.input, { paddingVertical: 7, paddingHorizontal: 12 }]}
+                value={convertDMS(lat, long)}
+                placeholderTextColor={grey}
+              />
+            </View>
           </View>
-
-
 
           <View style={styles.formContainer}>
             {editLoading && (
@@ -402,7 +481,7 @@ const Profil = () => {
               <TextInput underlineColorAndroid="transparent"
                 editable={false}
                 value={user.userNip}
-                style={[styles.input, { paddingVertical: 7, paddingHorizontal: 12 }]}
+                style={[styles.input, { color: grey, paddingVertical: 7, paddingHorizontal: 12 }]}
                 placeholder={user.userNip}
                 placeholderTextColor={grey}
               />
@@ -417,34 +496,18 @@ const Profil = () => {
                 value={nama}
                 placeholder={user.userNama}
                 style={[styles.input, { paddingVertical: 7, paddingHorizontal: 12 }]}
-                placeholderTextColor={grey}
+                placeholderTextColor={detail ? black : grey}
               />
             </View>
 
             <View style={styles.inputContainer}>
-              <Text style={styles.h3}>E-mail</Text>
-
-              <TextInput underlineColorAndroid="transparent"
-                editable={detail ? true : false}
-                onChangeText={setEmail}
-                value={email}
-                placeholder={user.userEmail}
-                style={[styles.input, { paddingVertical: 7, paddingHorizontal: 12 }]}
-                placeholderTextColor={grey}
-              />
+              <Text style={styles.h3}>Jabatan</Text>
+              <TouchableOpacity onPress={() => setModalVisible(true)} style={[styles.input, { paddingVertical: 14, paddingHorizontal: 12 }]} disabled={detail ? false : true}>
+                <Text style={detail ? { color: black } : { color: grey }}>{jabatan}</Text>
+              </TouchableOpacity>
             </View>
-            <View style={styles.inputContainer}>
-              <Text style={styles.h3}>No. HP</Text>
 
-              <TextInput underlineColorAndroid="transparent"
-                editable={detail ? true : false}
-                onChangeText={setNoHp}
-                value={noHp}
-                placeholder={user.userNoHp}
-                style={[styles.input, { paddingVertical: 7, paddingHorizontal: 12 }]}
-                placeholderTextColor={grey}
-              />
-            </View>
+            
             <View style={styles.inputContainer}>
 
               <TouchableOpacity style={[styles.submitBtn, detail ? { opacity: 1 } : { opacity: 0.5 }]} onPress={ubahAkun} disabled={detail ? false : true}>
@@ -633,4 +696,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center'
   },
+
+
+
+
+
+
+
+
+
+
+  centeredView: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalView: {
+    backgroundColor: "white",
+    width: '90%',
+    borderRadius: 5,
+    padding: 10,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5
+  },
+
 })

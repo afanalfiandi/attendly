@@ -16,7 +16,6 @@ const SplashScreen = () => {
     navig();
   }, []);
 
-
   const fadeIn = () => {
     Animated.timing(fadeAnim, {
       toValue: 1,
@@ -25,9 +24,7 @@ const SplashScreen = () => {
     }).start();
   };
 
-
   const navig = () => {
-
     setTimeout(async () => {
       const userId = await AsyncStorage.getItem('userId');
       const showApp = await AsyncStorage.getItem('showApp');
@@ -57,15 +54,7 @@ const SplashScreen = () => {
         </Animated.View>
       </View>
       <View style={styles.brandContainer}>
-        <Animated.View
-          style={[
-            styles.brandContainer,
-            {
-              // Bind opacity to animated value
-              opacity: fadeAnim
-            }
-          ]}
-        >
+        <Animated.View style={[styles.brandContainer,{opacity: fadeAnim}]}>
           <Text style={styles.brandName}>attend.ly</Text>
           <Text style={styles.brandMoto}>an easy way to track and record attendance</Text>
         </Animated.View>

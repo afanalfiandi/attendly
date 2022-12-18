@@ -1,7 +1,7 @@
 import { useNavigation } from "@react-navigation/native";
 import { useFocusEffect } from "@react-navigation/native";
-import React, { useEffect, useState } from "react";
-import { Modal, Alert, Pressable, PermissionsAndroid, Image, Dimensions, ActivityIndicator, ImageBackground, StyleSheet, Text, View, TouchableOpacity } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { Modal, ScrollView, RefreshControl, Alert, Pressable, PermissionsAndroid, Image, Dimensions, ActivityIndicator, ImageBackground, StyleSheet, Text, View, TouchableOpacity } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Geolocation from '@react-native-community/geolocation';
 import { getPreciseDistance } from 'geolib';
@@ -39,6 +39,7 @@ const Home = () => {
   const [longUser, setLongUser] = useState();
   const [loading, setLoading] = useState(true);
   const [loadingMap, setLoadingMap] = useState(false);
+  const [refreshing, setRefreshing] = React.useState(false);
   const [initRegion, setInitRegion] = useState({
     latitude: -7.4214337,
     longitude: 109.2542909,
@@ -56,6 +57,11 @@ const Home = () => {
       pulang: null
     }
   );
+
+  const wait = (timeout) => {
+    return new Promise(resolve => setTimeout(resolve, timeout));
+  }
+
   useEffect(() => {
     setTimeout(() => {
       setLoading(false);
@@ -70,6 +76,16 @@ const Home = () => {
       getJarak();
     }, 1000);
   }, []);
+
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    getData();
+    getJam();
+    getJarak();
+    wait(2000).then(() => setRefreshing(false));
+  }, []);
+
 
   const pingCheck = () => {
     NetInfo.fetch().then(state => {
@@ -129,18 +145,19 @@ const Home = () => {
       PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
     );
 
-
     Geolocation.getCurrentPosition((position) => {
       const lat = JSON.stringify(position.coords.latitude);
       const long = JSON.stringify(position.coords.longitude);
-      const dist = getPreciseDistance(
-        { latitude: latSekolah, longitude: longSekolah },
-        { latitude: lat, longitude: long },
+      var jarak = Math.sqrt(
+        (lat - latSekolah) * (lat - latSekolah) +
+        (long - longSekolah) * (long - longSekolah)
       );
-      // setDistance(dist);
-      setDistance('12');
+      jarak = jarak * 111319;
+      setDistance(jarak.toFixed(0));
+      // setDistance('12');
       setLatUser(lat);
       setLongUser(long);
+
     }, (e) => console.log(e), { enableHighAccuracy: false, timeout: 3000 });
   }
 
@@ -287,7 +304,9 @@ const Home = () => {
 
   return (
     <View style={{
-      flex: 1, alignItems: 'center',
+      flex: 1,
+      height: height,
+      alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: 'white'
     }}>
@@ -296,7 +315,9 @@ const Home = () => {
       )}
 
       {!loading && ping == true && (
-        <ImageBackground source={require('../assets/img/background.png')} resizeMode="cover" style={styles.image}>
+        <ImageBackground source={require('../assets/img/background.png')} resizeMode="cover" style={styles.image}
+        >
+
           <Modal
             animationType="slide"
             transparent={true}
@@ -368,6 +389,7 @@ const Home = () => {
             </View>
           </Modal>
           <View style={styles.header}>
+
             <View style={styles.imgContainer}>
               <TouchableOpacity onPress={() => {
                 navigation.navigate('Profil');
@@ -413,20 +435,19 @@ const Home = () => {
           {distance >= 50 && (
             <DisabledBtn />
           )}
-          {/* jika jarak krg dari 50 + jam masuk null, btn warna biru dan tulisan masuk */}
+
+          {/* Jika jarak kurang dari 50, sudah absen masuk tapi belum absen pulang */}
           {distance < 50 && jam.masuk != null && jam.pulang == null && (
             <PulangBtn />
           )}
 
-          {/* jika jarak krg dari 50 + jam masuk tdk null, btn warna gradasi dan tulisan pulang */}
-          {distance < 50 && jam.masuk == null && (
+          {/* jika jarak krg dari 50, blm absen masuk dan pulang, btn warna gradasi dan tulisan pulang */}
+          {distance < 50 && jam.masuk == null && jam.pulang == null (
             <MasukBtn />
           )}
 
-          {/* jika sudah absen pulang, tampilkan btn disabled berwarna abu */}
 
-          {/* jika jarak krg dari 50 + jam masuk tdk null, btn warna gradasi dan tulisan pulang */}
-          {jam.pulang != null && jam.masuk != null && (
+          {distance < 50 && jam.pulang != null && jam.masuk != null && (
             <SelesaiBtn />
           )}
           <View style={styles.distanceContainer}>
@@ -434,7 +455,7 @@ const Home = () => {
 
             {distance >= 50 && (
               <Text style={[styles.distanceText, { color: red }]}>
-                Jarak : {distance} Meter
+                Jarak : {distance.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")} Meter
               </Text>
             )}
             {distance < 50 && (
@@ -480,7 +501,7 @@ const Home = () => {
       {!loading && ping != true && (
         <NoInternet />
       )}
-    </View >
+    </View>
   )
 }
 

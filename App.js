@@ -53,10 +53,11 @@ const App = () => {
     <NavigationContainer>
       <StatusBar
         animated={true}
-        backgroundColor="white"
+        backgroundColor='white'
         barStyle='dark-content'
+        
       />
-      <Tab.Navigator initialRouteName='SplashScreen' screenOptions={{ headerShown: false, tabBarHideOnKeyboard: true }}>
+      <Tab.Navigator initialRouteName='SplashScreen' screenOptions={{ headerShown: false, tabBarHideOnKeyboard: true, }}>
         <Tab.Screen
           name="SplashScreen"
           component={SplashScreen}

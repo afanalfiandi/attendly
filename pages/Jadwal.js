@@ -1,5 +1,5 @@
-import { StyleSheet, FlatList, Text, TouchableOpacity, Image, View } from 'react-native'
-import React, { useState } from 'react'
+import { StyleSheet, FlatList, ActivityIndicator, Dimensions, Text, TouchableOpacity, Image, View } from 'react-native'
+import React, { useEffect, useState } from 'react'
 import { responsiveFontSize, responsiveHeight } from 'react-native-responsive-dimensions'
 import { useNavigation } from '@react-navigation/native'
 import { Calendar, CalendarList } from 'react-native-calendars';
@@ -11,6 +11,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const blue = '#0D4AA7';
 const black = '#616161';
 const red = '#C74B4C';
+const width = Dimensions.get('screen').width;
+const height = Dimensions.get('screen').height;
 
 const Jadwal = () => {
 
@@ -36,9 +38,65 @@ const Jadwal = () => {
   };
   LocaleConfig.defaultLocale = 'id';
 
-  const [data, setData] = useState();
+  const [data, setData] = useState(null);
+  const [dataHari, setDataHari] = useState({
+    id: '',
+    hari: ''
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setTimeout(() => {
+      setLoading(false);
+      getHari();
+      getDefaultJadwal();
+    }, 3000);
+  }, []);
+
+  const getHari = () => {
+    fetch('https://afanalfiandi.com/attendly/api/api.php?op=getHari', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      }
+    }).then((response) => response.json())
+      .then((responseJson) => {
+        setDataHari(responseJson);
+      })
+      .catch((e) => {
+        console.log(e);
+      })
+  }
+
   const getData = async (day) => {
-    const tgl = day.dateString;
+    const userId = await AsyncStorage.getItem('userId');
+
+
+    fetch('https://afanalfiandi.com/attendly/api/api.php?op=getJadwal', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        id: userId,
+        hari: day
+      })
+    }).then((response) => response.json())
+      .then((responseJson) => {
+        setLoading(true);
+        setTimeout(() => {
+          setData(responseJson);
+          setLoading(false);
+        }, 3000);
+      })
+      .catch((e) => {
+        console.log(e);
+      })
+  }
+
+  const getDefaultJadwal = async () => {
     const userId = await AsyncStorage.getItem('userId');
     fetch('https://afanalfiandi.com/attendly/api/api.php?op=getJadwal', {
       method: 'POST',
@@ -48,15 +106,11 @@ const Jadwal = () => {
       },
       body: JSON.stringify({
         id: userId,
-        tgl: tgl
+        hari: 1
       })
     }).then((response) => response.json())
       .then((responseJson) => {
-        if (responseJson != null) {
-          setData(responseJson);
-        } else {
-          setData(null);
-        }
+        setData(responseJson);
       })
       .catch((e) => {
         console.log(e);
@@ -66,58 +120,63 @@ const Jadwal = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        {/* <TouchableOpacity onPress={() => navigation.navigate('Home')}>
-          <Image source={require('../assets/img/icon/back-blue.png')} />
-        </TouchableOpacity> */}
         <Text style={styles.headerText}>Jadwal</Text>
       </View>
       <View style={styles.calendarContainer}>
-        <Calendar
-          onDayPress={day => {
-            getData(day)
-          }}
-          firstDay={1}
-          onPressArrowLeft={subtractMonth => subtractMonth()}
-          onPressArrowRight={addMonth => addMonth()}
-          disableAllTouchEventsForDisabledDays={true}
-          renderHeader={(month) => {
-            const date = month.toISOString();
-            return (
-              <Text style={{ fontWeight: 'bold', color: blue, fontSize: responsiveFontSize(2.2) }}>{moment(date).format('MMMM')}</Text>
-            )
-          }}
-          enableSwipeMonths={true}
-          onMonthChange={() =>
-            setData(null)
-          }
-        />
+        <FlatList
+          data={dataHari}
+          horizontal={true}
+          renderItem={({ item }) => (
+            <View style={styles.monthSlide}>
+              <TouchableOpacity onPress={() => {
+                getData(item.id);
+              }}>
+                <Text style={styles.monthText}>{item.hari}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          keyExtractor={item => item.id}
+          showsVerticalScrollIndicator={false}
+          style={styles.bulanSlider}
+        ></FlatList>
       </View>
-      <View style={styles.dataContainer}>
-        {data != null && (
-          <FlatList
-            data={data}
-            renderItem={({ item }) => (
-              <View style={styles.listContainer}>
-                <View style={styles.date}>
-                  <Text style={styles.dateText}>{item.tgl}</Text>
-                  <Text style={styles.dayText}>{moment(item.date).format('ddd')}</Text>
-                </View>
-                <View style={styles.jenisContainer}>
-                  <Text style={styles.jenisText}>{item.kegiatan}</Text>
-                  <Text style={styles.jamText}>{item.jam}</Text>
-                </View>
+      {loading && (
+        <ActivityIndicator size="large" style={styles.activityIndicator} />
+      )}
+      {!loading && (
+        <View style={{ flex: 1 }}>
+
+          <View style={styles.dataContainer}>
+            {data != null && (
+              <FlatList
+                data={data}
+                renderItem={({ item }) => (
+                  <View style={styles.cardContainer}>
+                    <View style={styles.card}>
+                      <View style={[styles.col, styles.col1]}>
+                        <Text style={[styles.h1, { color: blue }]}>{item.hari}</Text>
+                      </View>
+                      <View style={[styles.col, { width: '73%', marginLeft: '2%', justifyContent: 'center' }]}>
+                        <Text style={[styles.h2, { color: 'white' }]}>Kode Mapel : {item.kode}</Text>
+                        <Text style={[styles.h3, { color: 'white', fontWeight: 'bold' }]}>{item.mapel}</Text>
+                        <Text style={[styles.h2, { color: 'white' }]}>{item.jam}</Text>
+                        <Text style={[styles.h2, { color: 'white' }]}>{item.ruang}</Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+                keyExtractor={item => item.id}
+              ></FlatList>
+            )}
+
+            {data == null && !loading &&(
+              <View style={styles.emptyContainer}>
+                <Text style={styles.h2}>Jadwal kosong</Text>
               </View>
             )}
-            keyExtractor={item => item.id}
-            showsVerticalScrollIndicator={true}
-          ></FlatList>
-        )}
-        {data == null && (
-          <View style={{ width: '100%', height: '40%', justifyContent: 'center', alignItems: 'center' }}>
-            <Text style={{ color: blue }}>Jadwal kosong . . .</Text>
           </View>
-        )}
-      </View>
+        </View>
+      )}
     </View>
   )
 }
@@ -141,45 +200,79 @@ const styles = StyleSheet.create({
     color: blue
   },
   dataContainer: {
-    flex: 1
+    flex: 1,
+    alignItems: 'center',
+    marginTop: 10
   },
-  listContainer: {
+
+
+  monthText: {
+    marginHorizontal: 20,
+    fontSize: responsiveFontSize(2),
+    color: blue,
+    fontWeight: '600',
+    marginVertical: 10
+  },
+  cardContainer: {
     width: '100%',
-    height: responsiveHeight(13),
-    backgroundColor: '#E5E8EC',
-    marginBottom: 20,
-    borderRadius: 30,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
     flexDirection: 'row',
+    marginVertical: 10
   },
-  date: {
-    width: '22%',
-    backgroundColor: 'white',
-    borderRadius: 30,
+  card: {
+    backgroundColor: blue,
+    borderRadius: 20,
+    width: '100%',
+    justifyContent: 'space-between',
+    flexDirection: 'row',
+    height: 105,
+    shadowColor: blue,
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.27,
+    shadowRadius: 4.65,
+
+    elevation: 2,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  h1: {
+    fontSize: width * 0.05,
+    color: black,
+    fontWeight: 'bold'
+  },
+  h2: {
+    color: black,
+    fontSize: width * 0.04,
+  },
+  h3: {
+    color: black,
+    fontSize: 18
+  },
+  emptyContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center'
   },
-  jenisContainer: {
-    marginLeft: 10,
+  col: {
+    marginHorizontal: 3
+  },
+  col1: {
+    width: '25%',
     justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 30
   },
-  jamText: {
-    color: blue,
-    fontSize: responsiveFontSize(2)
-  },
-  jenisText: {
-    fontWeight: 'bold',
-    fontSize: responsiveFontSize(2.3),
-    color: blue,
-    marginBottom: 10
-  },
-  dateText: {
-    fontSize: responsiveFontSize(4),
-    color: blue
-  },
-  dayText: {
-    color: blue,
-    fontWeight: 'bold'
+  activityIndicator: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+    top: 0,
+    bottom: 0,
+    right: 0,
+    left: 0,
+    color: 'blue'
   }
 })

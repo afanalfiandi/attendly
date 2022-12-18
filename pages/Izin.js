@@ -258,7 +258,7 @@ const Izin = () => {
                     <TouchableOpacity style={[styles.input, { padding: 12 }]} onPress={() => {
                         handleLaunchCamera();
                     }}>
-                        <Text>Ambil Foto</Text>
+                        <Text style={{color: black}}>Ambil Foto</Text>
                     </TouchableOpacity>
                     <Text style={styles.h3}>
                         Sertakan foto kelengkapan Anda jika ada.

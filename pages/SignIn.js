@@ -84,7 +84,7 @@ const SignIn = () => {
             Password
           </Text>
 
-          <TextInput onChangeText={setPassword} value={password} style={styles.input} secureTextEntry={true} placeholderTextColor={grey} placeholder="Masukkan NIP Anda"></TextInput>
+          <TextInput onChangeText={setPassword} value={password} style={styles.input} secureTextEntry={true} placeholderTextColor={grey} placeholder="Masukkan Password Anda"></TextInput>
         </View>
         <View style={styles.inputContainer}>
           <TouchableOpacity onPress={submit} style={styles.submitBtn}>
@@ -92,10 +92,10 @@ const SignIn = () => {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.inputContainer}>
+        {/* <View style={styles.inputContainer}>
           <Text style={styles.copyText}>Lupa Kata Sandi?</Text>
           <Text style={styles.ownerText}>Hubungi Admin</Text>
-        </View>
+        </View> */}
 
 
       </View>
