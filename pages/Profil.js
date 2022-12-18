@@ -408,7 +408,7 @@ const Profil = () => {
               </TouchableOpacity>
             </View>
           </View>
-
+  
           <View style={styles.mapContainer}>
             <View style={styles.mapHeadingContainer}>
               <Text style={styles.h2}>Lokasi Anda Saat Ini</Text>
